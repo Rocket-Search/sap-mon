@@ -1,4 +1,4 @@
-a small monitoring tool to check sap basis health.
+a small monitoring tool to check sap base health.
 
 The tool reads the SAP CCMS values and check it to your defined thresholds.
 
