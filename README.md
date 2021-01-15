@@ -1,36 +1,41 @@
-a small monitoring tool to check sap base health.
+A small monitoring tool to check sap base health.
 
 The tool reads the SAP CCMS values and check it to your defined thresholds.
 
-The exit codes are best uses with Icinga Monitoring.
+The exit codes are best uses with Icinga / Nagios Monitoring.
 
 It based on the SAP RFC SDK 7.50 for the SAP communication.
 
-first download and configure SAP RFC SDK 
+first download and configure SAP RFC SDK
 
 https://support.sap.com/en/product/connectors/nwrfcsdk.html#section_1291717368
 
-compile command:
+Than use simple "make" for comipling.
 
-	g++ -O3 -fPIC -Wall -std=c++17 -DSAPwithUNICODE -I./nwrfcsdk/include -c -o sap_mon.o sap_mon.cpp ;
+Here is also a "sap authorization role" transport for the SAP system. 
 
-	g++ -O3 -fPIC -Wall -o sap_mon sap_mon.o ./nwrfcsdk/lib/libsapnwrfc.so ./nwrfcsdk/lib/libsapucum.so;date
+Simple import the transport request to use minimum permisions for the sap_mon monitoring user.
+
+
 
 execute command:
 
-	sap_mon -show = show all available SAP monitors according to RZ20
-	
-	example: sap_mon -show -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER>
-	
-	sap_mon -check = checks the CCMS Performance Attribute from the given monitor
-	
-	example: sap_mon -check -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER> -monitor='RZ20 Monitor Propertie Name' -warn=<VALUE> -critical=<VALUE>
-	
-	features under development:
-	
-	check aborted-job
-	check ABAP runtime erros
-  
-  
-	
+sap_mon -show = show all available SAP monitors according to RZ20
+
+example: sap_mon -show -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER>
+
+
+sap_mon -check = checks the CCMS Performance Attribute from the given monitor
+
+example: sap_mon -check -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER> -monitor='RZ20 Monitor Propertie Name' -warn=<VALUE> -critical=<VALUE>
+
+
+sap_mon -aborted-job = See the last aborted background jobs in the system
+
+sap_mon -aborted-job -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER>
+
+features under development:
+
+check ABAP runtime errors
+
 if you have any question, don't hesitate to contact me software.moore@gmail.com
