@@ -20,9 +20,13 @@ Simple import the transport request to use minimum permisions for the sap_mon mo
 
 execute command:
 
+
+
 sap_mon -show = show all available SAP monitors according to RZ20
 
 example: sap_mon -show -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER>
+
+
 
 
 sap_mon -check = checks the CCMS Performance Attribute from the given monitor
@@ -30,12 +34,19 @@ sap_mon -check = checks the CCMS Performance Attribute from the given monitor
 example: sap_mon -check -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER> -monitor='RZ20 Monitor Propertie Name' -warn=<VALUE> -critical=<VALUE>
 
 
+
+
 sap_mon -aborted-job = See the last aborted background jobs in the system
 
 sap_mon -aborted-job -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER>
 
+
+
 features under development:
 
 check ABAP runtime errors
+
+
+
 
 if you have any question, don't hesitate to contact me software.moore@gmail.com
