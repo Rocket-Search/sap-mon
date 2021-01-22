@@ -41,7 +41,9 @@ sap_mon -aborted-job = See the last aborted background jobs in the system
 sap_mon -aborted-job -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER>
 
 
+
 sap_mon -abap-dump = Shows the last ABAP dumps
+
 sap_mon -abap-dump -username=<USERNAME> -password=<PASSWORD>> -hostname=<HOSTNAME> -sid=<SAP SID> -sysnum=<SYSTEMNUMBER> -client=<CLIENT NUMBER>
 
 
