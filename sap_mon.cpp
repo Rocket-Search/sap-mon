@@ -1,14 +1,3 @@
-//Compile
-//g++ -g -std=c++0x -DSAPwithUNICODE -I./nwrfcsdk/include -c -o sap_mon.o sap_mon.cpp
-//Link
-//g++ -g -o sap_mon sap_mon.o ./nwrfcsdk/lib/libsapnwrfc.so ./nwrfcsdk/lib/libsapucum.so
-
-//Execute:
-//./sap_mon -show -username=<USER> -password=<PASSWORD> -hostname=<HOSTANAME> -sid=<SAP-SID> -sysnum=<SYSYSTEMNUMMER> -client=<CLIENT>
-//./sap_mon -check -username=<USER> -password=<PASSWORD> -hostname=<HOSTANAME> -sid=<SAP-SID> -sysnum=<SYSYSTEMNUMMER> -client=<CLIENT> -monitor='<SAP-SID>\<HOSTANAME>_<SAP-SID>_<SYSYSTEMNUMMER>\OperatingSystem\Filesystems\/tmp\Freespace' -warn=4000 -critical=2999
-//./sap_mon -aborted-job -username=<USER> -password=<PASSWORD> -hostname=<HOSTANAME> -sid=<SAP-SID> -sysnum=<SYSYSTEMNUMMER> -client=<CLIENT> 
-//./sap_mon -abap-dump -username=<USER> -password=<PASSWORD> -hostname=<HOSTANAME> -sid=<SAP-SID> -sysnum=<SYSYSTEMNUMMER> -client=<CLIENT> 
-
 #include <unistd.h>
 #include <stdio.h>
 #include <string>
@@ -30,20 +19,44 @@
 
 using namespace std;
 
+
 RFC_ERROR_INFO errorInfo;
 RFC_RC rc = RFC_OK;
 
 
+
+string username_extern; 
+string password_extern;
+string hostname_extern;
+string sid_extern;
+string sysnr_extern;
+string client_nr_extern;
+vector<string> certlist_array;
+
+
+string cert_subject;
+string cert_valud_until;
+vector<string> certlist_subj_valid_until;
+bool ssl_check = false;
+
+
+string rfc_destination;
+int icinga_retun_code = - 1;
+string rueckgabe_nachricht;
+
+
 void signalHandler( int signum)
 {
-		cout<<"PROBLEM RFC SDK"<<endl;
+		cout<<"PROBLEM SAP MON mail to software.moore@gmail.com"<<endl;
         cout << "Interrupt signal (" << signum << ") received.\n";
         
 		printfU(cU("signalHandler key# %s: %d\n"),errorInfo.key);
 		printfU(cU("signalHandler message# %s: %d\n"),errorInfo.message);
 		printfU(cU("signalHandler code# %d\n"),errorInfo.code);
 		printfU(cU("signalHandler rc # %d\n"),rc);
-        exit (- 1);
+        
+
+		exit(EXIT_FAILURE);
 }
 
 int main(int argc, char *argv[])
@@ -56,6 +69,10 @@ int main(int argc, char *argv[])
         signal(SIGTERM, signalHandler);
         signal(SIGINT, signalHandler);
 
+
+
+
+
 		
 		string parameter;
 		parameter = argv[1];
@@ -65,6 +82,7 @@ int main(int argc, char *argv[])
 		wo_ist_show_parameter = parameter.find("-show");
 		
 		
+
 		if (wo_ist_show_parameter > -1)
 		{
 
@@ -75,7 +93,6 @@ int main(int argc, char *argv[])
 			RFC_CONNECTION_PARAMETER loginParams[NUM_PARAMS];
 			unsigned resultLen = 0;
 			
-			
 
 			string username;
 			username = argv[2];
@@ -83,127 +100,163 @@ int main(int argc, char *argv[])
 			int wo_ist_gleich = - 1;
 			wo_ist_gleich = username.find("=");
 			username = username.substr(wo_ist_gleich + 1,username.length());
+
 			SAP_UC *username_sapuc = NULL;
 			unsigned username_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (username_sapuc == NULL)
 			{
 
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string password;
 			password = argv[3];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = password.find("=");
 			password = password.substr(wo_ist_gleich + 1,password.length());
+
 			SAP_UC *password_sapuc = NULL;
 			unsigned password_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (password_sapuc == NULL)
 			{
 
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string hostname;
 			hostname = argv[4];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = hostname.find("=");
 			hostname = hostname.substr(wo_ist_gleich + 1,hostname.length());
+
 			SAP_UC *hostname_sapuc = NULL;
 			unsigned hostname_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (hostname_sapuc == NULL)
 			{
 
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string sid;
 			sid = argv[5];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sid.find("=");
 			sid = sid.substr(wo_ist_gleich + 1,sid.length());
+
 			SAP_UC *sid_sapuc = NULL;
+
 			unsigned sid_sapuc_len;
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (sid_sapuc == NULL)
 			{
 
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string sysnr;
 			sysnr = argv[6];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sysnr.find("=");
 			sysnr = sysnr.substr(wo_ist_gleich + 1,sysnr.length());
+
 			SAP_UC *sysnr_sapuc = NULL;
+
 			unsigned sysnr_sapuc_len;
 
 			resultLen = 0;
 
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (sysnr_sapuc == NULL)
 			{
 
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string client_nr;
 			client_nr = argv[7];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = client_nr.find("=");
 			client_nr = client_nr.substr(wo_ist_gleich + 1,client_nr.length());
+
 			SAP_UC *client_nr_sapuc = NULL;
 			unsigned client_nr_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (client_nr_sapuc == NULL)
 			{
 
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			
 			loginParams[0].name = cU("dest");
@@ -229,10 +282,11 @@ int main(int argc, char *argv[])
 			loginParams[7].name = cU("lang");
 			loginParams[7].value = cU("EN");
 			loginParams[8].name = cU("TRACE");
-			loginParams[8].value = cU("0");	
+			loginParams[8].value = cU("0");
 	
 			RFC_CONNECTION_HANDLE conn;
 			conn = RfcOpenConnection(loginParams, NUM_PARAMS, &errorInfo);
+
 				
 			if (errorInfo.code != RFC_OK) 
 			{
@@ -262,9 +316,10 @@ int main(int argc, char *argv[])
 			RfcSetChars(rfc_handle, cU("INTERFACE"), cU("XAL"), 3, &errorInfo);
 			RfcSetChars(rfc_handle, cU("VERSION"), cU("1.0"), 3, &errorInfo);
 			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
 			ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MON_GETLIST"), &errorInfo);
 			rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
-			RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("<USER>"), 8, &errorInfo);
+			RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("RFC_TEST"), 8, &errorInfo);
 
 
 			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
@@ -295,6 +350,7 @@ int main(int argc, char *argv[])
 					printfU(cU(" |\n"));
 					printfU(cU("  -> %s\n"),moni_name);
 				
+
 				ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MON_GETTREE"), &errorInfo);
 					
 				rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
@@ -303,195 +359,237 @@ int main(int argc, char *argv[])
 				
 				RfcSetInt(rfc_handle, cU("VIS_ON_USR_LEVEL"), 3,&errorInfo);
 
-				RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("RFC-USER"), 8, &errorInfo);
+				RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("RFC_TEST"), 8, &errorInfo);
 				
-				
+
 				RfcGetStructure(rfc_handle, cU("MONITOR_NAME"), &returnStructure, &errorInfo);
-				
+
 				RfcSetStructure(rfc_handle, cU("MONITOR_NAME"),returnStructure, &errorInfo);
 				
-				
+
 				RfcSetChars(returnStructure, cU("MS_NAME"), ms_name, strlenU(ms_name), &errorInfo);
-				
+
 				RfcSetChars(returnStructure, cU("MONI_NAME"),moni_name , strlenU(moni_name), &errorInfo);
-				
+
 				rc = RfcInvoke(conn, rfc_handle, &errorInfo);
 					
 				RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+
 				RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
-				
+
+
 				rowCount_2 = 0;
 
 				rc = RfcGetTable(rfc_handle, cU("TREE_NODES"),&table_2,&errorInfo);
 				RfcGetRowCount(table_2, &rowCount_2, &errorInfo);
-				
+
 				for (unsigned j = 0; j < rowCount_2; ++j) 
 				{
 					RfcMoveTo(table_2, j, NULL);
-				
+
 					RfcGetString(table_2, cU("CUSGRPNAME"), object_name,sizeofU(object_name), NULL, &errorInfo);				
 						printfU(cU(" 	| -> %s\n"),object_name);
 						
 					RfcGetString(table_2, cU("OBJECTNAME"), object_name,sizeofU(object_name), NULL, &errorInfo);				
 						printfU(cU("	| ->%s\n"), object_name);
 						printfU(cU(" 	|\n"));
-				
+
 				}
 				rowCount_2 = 0;
 
 					
 			}
 			
+				
+				
+			
 						
 			RfcDestroyFunction(rfc_handle, &errorInfo);
 			
 			RfcCloseConnection(conn, NULL);
 		}
-	
+
 		int wo_ist_check_parameter = - 1;
 		wo_ist_check_parameter = parameter.find("-check");
-		
-		if (wo_ist_check_parameter > -1)
+	
+		if (argv[1] == std::string("-check"))
+
 		{
-		
-		
+
 			#define NUM_PARAMS 9
 			RFC_CONNECTION_PARAMETER loginParams[NUM_PARAMS];
 
-		
+
 			unsigned resultLen = 0;
 			
+			
+
 			string username;
 			username = argv[2];
-		
+
 			int wo_ist_gleich = - 1;
 			wo_ist_gleich = username.find("=");
 			username = username.substr(wo_ist_gleich + 1,username.length());
+
 			SAP_UC *username_sapuc = NULL;
 			unsigned username_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+					
 			}
 			if (username_sapuc == NULL)
 			{
-		
+
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string password;
 			password = argv[3];
-		
+
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = password.find("=");
 			password = password.substr(wo_ist_gleich + 1,password.length());
+
 			SAP_UC *password_sapuc = NULL;
 			unsigned password_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
+
 			{
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (password_sapuc == NULL)
 			{
+
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			
-		
+
 			string hostname;
 			hostname = argv[4];
-		
+
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = hostname.find("=");
 			hostname = hostname.substr(wo_ist_gleich + 1,hostname.length());
+
 			SAP_UC *hostname_sapuc = NULL;
 			unsigned hostname_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+				
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+				
 			}
 			if (hostname_sapuc == NULL)
 			{
-		
+				
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+				
 			}
-		
-
+			
 			string sid;
 			sid = argv[5];
-		
+			
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sid.find("=");
 			sid = sid.substr(wo_ist_gleich + 1,sid.length());
+			
 			SAP_UC *sid_sapuc = NULL;
+			
 			unsigned sid_sapuc_len;
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+			
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+			
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+			
 			}
 			if (sid_sapuc == NULL)
 			{
-
+			
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+			
 			}
+			
 			string sysnr;
 			sysnr = argv[6];
-
+			
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sysnr.find("=");
 			sysnr = sysnr.substr(wo_ist_gleich + 1,sysnr.length());
+			
 			SAP_UC *sysnr_sapuc = NULL;
+			
 			unsigned sysnr_sapuc_len;
-
+			
 			resultLen = 0;
-
+			
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+			
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+			
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+			
 			}
 			if (sysnr_sapuc == NULL)
 			{
-
+			
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+			
 			}
+			
 			string client_nr;
 			client_nr = argv[7];
-
+			
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = client_nr.find("=");
 			client_nr = client_nr.substr(wo_ist_gleich + 1,client_nr.length());
+			
 			SAP_UC *client_nr_sapuc = NULL;
 			unsigned client_nr_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+			
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+			
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+			
 			}
 			if (client_nr_sapuc == NULL)
 			{
-
+			
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+			
 			}
+			
 
 			loginParams[0].name = cU("dest");
 			loginParams[0].value = cU("DEV");
@@ -516,10 +614,12 @@ int main(int argc, char *argv[])
 			loginParams[7].name = cU("lang");
 			loginParams[7].value = cU("EN");
 			loginParams[8].name = cU("TRACE");
-			loginParams[8].value = cU("0");	
+			loginParams[8].value = cU("0");
 	
+
 			RFC_CONNECTION_HANDLE conn;
 			conn = RfcOpenConnection(loginParams, NUM_PARAMS, &errorInfo);
+
 				
 			if (errorInfo.code != RFC_OK) 
 			{
@@ -532,6 +632,7 @@ int main(int argc, char *argv[])
 
 			RFC_FUNCTION_DESC_HANDLE ccms_bapi_handle;
 			RFC_FUNCTION_HANDLE rfc_handle;
+
 
 			SAP_UC message[5000] = iU("");
 
@@ -547,113 +648,136 @@ int main(int argc, char *argv[])
 			RfcSetChars(rfc_handle, cU("VERSION"), cU("1.0"), 3, &errorInfo);
 			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
 
+
 			ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETTIDBYNAME"), &errorInfo);
 		
 			rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
 			
+
 			string monitor_name_temp_2;
 			string monitor_name;
+
 			monitor_name_temp_2 = argv[8];
-		
+
 			int wo_ist_gleich_2 = - 1;
 			wo_ist_gleich_2 = monitor_name_temp_2.find("=");
 			int mointor_lange = 0;
 			mointor_lange = monitor_name_temp_2.length();
-		
+
 			monitor_name = monitor_name_temp_2.substr(wo_ist_gleich_2 + 1, mointor_lange);
+
 			int wo_ist_backslash = - 1;
 			wo_ist_backslash = monitor_name.find("\\");
-		
+
 			string monitor_name_sap_sid;
 			monitor_name_sap_sid = monitor_name.substr(0,wo_ist_backslash);
+
 			SAP_UC *monitor_name_sap_sid_sapuc = NULL;
 			unsigned monitor_name_sap_sid_sapuc_len;
-		
+
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)monitor_name_sap_sid.c_str(),strlen(monitor_name_sap_sid.c_str()),monitor_name_sap_sid_sapuc, &monitor_name_sap_sid_sapuc_len, &resultLen,  &errorInfo);
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
-		
+
 				monitor_name_sap_sid_sapuc = (SAP_UC*)reallocU(monitor_name_sap_sid_sapuc, monitor_name_sap_sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)monitor_name_sap_sid.c_str(),strlen(monitor_name_sap_sid.c_str()),monitor_name_sap_sid_sapuc, &monitor_name_sap_sid_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (monitor_name_sap_sid_sapuc == NULL)
 			{
 				monitor_name_sap_sid_sapuc = (SAP_UC*)reallocU(monitor_name_sap_sid_sapuc, monitor_name_sap_sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)monitor_name_sap_sid.c_str(),strlen(monitor_name_sap_sid.c_str()),monitor_name_sap_sid_sapuc, &monitor_name_sap_sid_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			int wo_ist_backslash_2 = - 1;
 			wo_ist_backslash_2 = monitor_name.find("\\",wo_ist_backslash + 1);
+
 			string conetxt_name = monitor_name.substr(wo_ist_backslash + 1, wo_ist_backslash_2 - wo_ist_backslash - 1);
+
 			SAP_UC *monitor_name_context_name_sapuc = NULL;
 			unsigned monitor_name_context_name_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)conetxt_name.c_str(),strlen(conetxt_name.c_str()),monitor_name_context_name_sapuc, &monitor_name_context_name_sapuc_len, &resultLen,  &errorInfo);
-		
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				monitor_name_context_name_sapuc = (SAP_UC*)reallocU(monitor_name_context_name_sapuc, monitor_name_context_name_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)conetxt_name.c_str(),strlen(conetxt_name.c_str()),monitor_name_context_name_sapuc, &monitor_name_context_name_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (monitor_name_context_name_sapuc == NULL)
 			{
-		
+
 				monitor_name_context_name_sapuc = (SAP_UC*)reallocU(monitor_name_context_name_sapuc, monitor_name_context_name_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)conetxt_name.c_str(),strlen(conetxt_name.c_str()),monitor_name_context_name_sapuc, &monitor_name_context_name_sapuc_len, &resultLen,  &errorInfo);
-			
+
 			}
+
 			int wo_ist_ende = - 1;
 			wo_ist_ende = monitor_name.rfind("\\");
-			
+
 			int monitor_name_laenge = - 1;
 			monitor_name_laenge = monitor_name.length();
 			string mte_name = monitor_name.substr(wo_ist_ende + 1, monitor_name_laenge -  wo_ist_ende );
+
 			SAP_UC *monitor_name_mte_name_sapuc = NULL;
 			unsigned monitor_name_mte_name_sapuc_len;			
 			resultLen = 0;
-			
+
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)mte_name.c_str(),strlen(mte_name.c_str()),monitor_name_mte_name_sapuc, &monitor_name_mte_name_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				monitor_name_mte_name_sapuc = (SAP_UC*)reallocU(monitor_name_mte_name_sapuc, monitor_name_mte_name_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)mte_name.c_str(),strlen(mte_name.c_str()),monitor_name_mte_name_sapuc, &monitor_name_mte_name_sapuc_len, &resultLen,  &errorInfo);
-			
+
 			}
 
 			if (monitor_name_mte_name_sapuc == NULL)
 			{
-			
+
 				monitor_name_mte_name_sapuc = (SAP_UC*)reallocU(monitor_name_mte_name_sapuc, monitor_name_mte_name_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)mte_name.c_str(),strlen(mte_name.c_str()),monitor_name_mte_name_sapuc, &monitor_name_mte_name_sapuc_len, &resultLen,  &errorInfo);
-			
+
 			}
+
 			string monitor_name_temp = monitor_name.substr(0, wo_ist_ende);
 			int monitor_name_temp_laenge = monitor_name_temp.length();
-			
+
 			int wo_ist_backslash_3 = - 1;
-			wo_ist_backslash_3 = monitor_name_temp.rfind("\\");		//#53
+			wo_ist_backslash_3 = monitor_name_temp.rfind("\\");
+
 			string object_name = monitor_name_temp.substr(wo_ist_backslash_3 + 1, monitor_name_temp_laenge - wo_ist_backslash_3 );
+
 			SAP_UC *monitor_name_object_name_sapuc = NULL;
 			unsigned monitor_name_object_name_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)object_name.c_str(),strlen(object_name.c_str()),monitor_name_object_name_sapuc, &monitor_name_object_name_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				monitor_name_object_name_sapuc = (SAP_UC*)reallocU(monitor_name_object_name_sapuc, monitor_name_object_name_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)object_name.c_str(),strlen(object_name.c_str()),monitor_name_object_name_sapuc, &monitor_name_object_name_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (monitor_name_object_name_sapuc == NULL)
 			{
-			
+
 				monitor_name_object_name_sapuc = (SAP_UC*)reallocU(monitor_name_object_name_sapuc, monitor_name_object_name_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)object_name.c_str(),strlen(object_name.c_str()),monitor_name_object_name_sapuc, &monitor_name_object_name_sapuc_len, &resultLen,  &errorInfo);
-			
+
 			}
-			
+
 			RfcSetChars(rfc_handle, cU("CONTEXT_NAME"), monitor_name_context_name_sapuc, strlenU(monitor_name_context_name_sapuc), &errorInfo);	
-			
+
 			RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 26, &errorInfo);
 			RfcSetChars(rfc_handle, cU("MTE_NAME"), monitor_name_mte_name_sapuc, strlenU(monitor_name_mte_name_sapuc), &errorInfo);	
+
 			RfcSetChars(rfc_handle, cU("OBJECT_NAME"), monitor_name_object_name_sapuc, strlenU(monitor_name_object_name_sapuc), &errorInfo);	
 
 			RfcSetChars(rfc_handle, cU("SYSTEM_ID"), monitor_name_sap_sid_sapuc, strlenU(monitor_name_sap_sid_sapuc), &errorInfo);	
@@ -662,23 +786,225 @@ int main(int argc, char *argv[])
 				
 			RFC_STRUCTURE_HANDLE returnStructure;
 			RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+
 			rc = RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+
+
+
+			SAP_UC message_mtclass[9999] = iU("");
 			
 			RfcGetStructure(rfc_handle, cU("TID"), &returnStructure, &errorInfo);
 			
 			RfcGetString(returnStructure, cU("MTSYSID"), message, sizeofU(message), &resultLen, &errorInfo);
-			
+
 			RfcGetString(returnStructure, cU("MTMCNAME"), message, sizeofU(message), &resultLen, &errorInfo);
-			
+
 			RfcGetString(returnStructure, cU("MTNUMRANGE"), message, sizeofU(message), &resultLen, &errorInfo);
-			
+
 			RfcGetString(returnStructure, cU("MTUID"), message, sizeofU(message), &resultLen, &errorInfo);
-			
-			RfcGetString(returnStructure, cU("MTCLASS"), message, sizeofU(message), &resultLen, &errorInfo);
-			
+
+			RfcGetString(returnStructure, cU("MTCLASS"), message_mtclass, sizeofU(message_mtclass), &resultLen, &errorInfo);
+
 			RfcGetString(returnStructure, cU("MTINDEX"), message, sizeofU(message), &resultLen, &errorInfo);
-			
+
 			RfcGetString(returnStructure, cU("EXTINDEX"), message, sizeofU(message), &resultLen, &errorInfo);
+
+			unsigned message_int_mtclass;
+			unsigned result_length_mtclass;
+			char message_char_mtclass[9999];
+
+			resultLen = 0;
+			rc = RfcSAPUCToUTF8(message_mtclass, strlenU(message_mtclass), (RFC_BYTE *)message_char_mtclass, &message_int_mtclass, &result_length_mtclass, &errorInfo);
+			if (rc == RFC_BUFFER_TOO_SMALL)
+			{
+				rc = RfcSAPUCToUTF8(message_mtclass, strlenU(message_mtclass), (RFC_BYTE *)message_char_mtclass, &message_int_mtclass, &result_length_mtclass, &errorInfo);
+			}
+
+			string message_string_mtclass;
+			std::stringstream ConvertStream_mtclass;
+			ConvertStream_mtclass<<	message_char_mtclass;
+			ConvertStream_mtclass>>message_string_mtclass;
+
+			if (message_string_mtclass ==  "111")
+			{
+
+				ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETTXTPROP"), &errorInfo);
+
+				rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+
+				RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 8, &errorInfo);
+
+				rc = RfcSetStructure(rfc_handle, cU("TID"),returnStructure, &errorInfo);
+
+
+				rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
+
+				RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				
+				unsigned message_int;
+				unsigned result_length;
+
+				char message_char[5000];
+
+				rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
+
+				if (rc == RFC_BUFFER_TOO_SMALL)
+				{
+
+					rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
+
+				}
+
+				if (strlen(message_char) != 0)
+				{
+					cout<<"Fehler: Monitor nicht definiert"<<endl;
+
+
+														
+					RfcDestroyFunction(rfc_handle, &errorInfo);
+					RfcCloseConnection(conn, NULL);
+
+					exit(-1);
+				}
+				
+				RfcGetStructure(rfc_handle, cU("PROPERTIES"), &returnStructure, &errorInfo);
+
+				
+				RfcGetString(returnStructure, cU("TEXT"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				printfU(cU("%s\n"), message);
+				
+				RfcDestroyFunction(rfc_handle, &errorInfo);
+				RfcCloseConnection(conn, NULL);
+			
+				exit(0);
+				
+
+			}
+			
+
+			if (message_string_mtclass ==  "101")
+			{
+
+				ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETMLCURVAL"), &errorInfo);
+
+				rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+
+				RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 8, &errorInfo);
+
+				rc = RfcSetStructure(rfc_handle, cU("TID"),returnStructure, &errorInfo);
+
+
+				rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
+
+				RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				unsigned message_int;
+				unsigned result_length;
+
+				char message_char[5000];
+
+				rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
+
+				if (rc == RFC_BUFFER_TOO_SMALL)
+				{
+
+					rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
+
+				}
+
+				if (strlen(message_char) != 0)
+				{
+					cout<<"Fehler: Monitor nicht definiert"<<endl;
+
+														
+					RfcDestroyFunction(rfc_handle, &errorInfo);
+					RfcCloseConnection(conn, NULL);
+
+					exit(-1);
+				}
+
+				RfcGetStructure(rfc_handle, cU("XMI_MSG_EXT"), &returnStructure, &errorInfo);
+				
+				RfcGetString(returnStructure, cU("MSG"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				printfU(cU("%s\n"), message);
+				
+				RfcDestroyFunction(rfc_handle, &errorInfo);
+				RfcCloseConnection(conn, NULL);
+			
+				exit(0);
+				
+
+			}
+			
+
+			if (message_string_mtclass ==  "102")
+			{
+
+				ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETSMVALUE"), &errorInfo);
+				
+				rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+
+				RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 8, &errorInfo);
+				
+				rc = RfcSetStructure(rfc_handle, cU("TID"),returnStructure, &errorInfo);
+
+					
+				rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+					
+				RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				unsigned message_int;
+				unsigned result_length;
+
+				char message_char[5000];
+				
+				rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
+
+				if (rc == RFC_BUFFER_TOO_SMALL)
+				{
+
+					rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
+
+				}
+
+				if (strlen(message_char) != 0)
+				{
+					cout<<"Fehler: Monitor nicht definiert"<<endl;
+					
+															
+					RfcDestroyFunction(rfc_handle, &errorInfo);
+					RfcCloseConnection(conn, NULL);
+					
+					exit(-1);
+				}
+				RfcGetStructure(rfc_handle, cU("VALUE"), &returnStructure, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MSG"), message, sizeofU(message), &resultLen, &errorInfo);
+
+					printfU(cU("%s\n"), message);
+
+				RfcDestroyFunction(rfc_handle, &errorInfo);
+				RfcCloseConnection(conn, NULL);
+				
+				exit(0);
+			}
+			
+
+			if (message_string_mtclass ==  "100")
+
+			{
+
 			ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETPERFCURVAL"), &errorInfo);
 			
 			rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
@@ -690,124 +1016,131 @@ int main(int argc, char *argv[])
 			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
 				
 			RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
-			
+
 			RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+
 				unsigned message_int;
 				unsigned result_length;
+
 				char message_char[5000];
 
 				rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
-			
+
 				if (rc == RFC_BUFFER_TOO_SMALL)
 				{
-			
+
 					rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
-			
+
 				}
-			
+
 				if (strlen(message_char) != 0)
 				{
 					cout<<"Fehler: Monitor nicht definiert"<<endl;
 					
-																		
+
+															
 					RfcDestroyFunction(rfc_handle, &errorInfo);
 					RfcCloseConnection(conn, NULL);
 					
 					exit(-1);
 				}
-			
+
+
 
 			RfcGetStructure(rfc_handle, cU("CURRENT_VALUE"), &returnStructure, &errorInfo);
-			
+
 			RfcGetString(returnStructure, cU("ALRELEVVAL"), message, sizeofU(message), &resultLen, &errorInfo);
-			
+
 				printfU(cU("%s\n"), message);
-			
 				
 			RfcDestroyFunction(rfc_handle, &errorInfo);
 			RfcCloseConnection(conn, NULL);
 			
-			
-						
-			
-			string warn_1;
-			warn_1 = argv[9];
-			
-			wo_ist_gleich = - 1;
-			wo_ist_gleich = warn_1.find("=");
-			
-			string warn_2;
-			int warn_laenge = - 1;
-			warn_laenge = warn_1.length();
-			warn_2 = warn_1.substr(wo_ist_gleich + 1,warn_laenge);
+
+			if (argc > 9)
+			{
+
 			
 
-			string critical_1;
-			critical_1 = argv[10];
-			
-			wo_ist_gleich = - 1;
-			wo_ist_gleich = critical_1.find("=");
-			
-			string critical_2;
-			int critical_laenge = - 1;
-			critical_laenge = critical_1.length();
-			critical_2 = critical_1.substr(wo_ist_gleich + 1,critical_laenge);
-			
-				
-			resultLen = 0;
-			rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
-			
-			if (rc == RFC_BUFFER_TOO_SMALL)
-			{
+				string warn_1;
+				warn_1 = argv[9];
+
+				wo_ist_gleich = - 1;
+				wo_ist_gleich = warn_1.find("=");
+
+				string warn_2;
+				int warn_laenge = - 1;
+				warn_laenge = warn_1.length();
+				warn_2 = warn_1.substr(wo_ist_gleich + 1,warn_laenge);
+
+
+				string critical_1;
+				critical_1 = argv[10];
+
+				wo_ist_gleich = - 1;
+				wo_ist_gleich = critical_1.find("=");
+
+				string critical_2;
+				int critical_laenge = - 1;
+				critical_laenge = critical_1.length();
+				critical_2 = critical_1.substr(wo_ist_gleich + 1,critical_laenge);
+
+					
+				resultLen = 0;
 				rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
-			
+
+				if (rc == RFC_BUFFER_TOO_SMALL)
+				{
+
+					rc = RfcSAPUCToUTF8(message, strlenU(message), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
+
+				}
+
+				int wert_int;
+				std::stringstream ConvertStream;
+				ConvertStream<<	message_char;
+				ConvertStream>>wert_int;
+
+
+				int warn_int = atoi(warn_2.c_str());
+
+
+				int critical_int = atoi(critical_2.c_str());
+
+
+				if (wert_int >= warn_int)
+				{
+					cout<<"WARNUNG"<<endl;
+					exit(1);
+				}
+
+				if (wert_int >= critical_int)
+				{
+					cout<<"CRITICAL"<<endl;
+					exit(2);
+				}
+
 			}
-			int wert_int;
-			std::stringstream ConvertStream;
-			ConvertStream<<	message_char;
-			ConvertStream>>wert_int;
 			
-
-			int warn_int = atoi(warn_2.c_str());
-			
-
-			int critical_int = atoi(critical_2.c_str());
-			//#http://docs.icinga.org/latest/de/pluginapi.html
-			//#Exit Codes
-			//#0 	OK		UP
-			//#1	WARNING		UP oder DOWN/UNREACHABLE*
-			//#2	CRITICAL	DOWN/UNREACHABLE
-			//#3	UNKNOWN		DOWN/UNREACHABLE
-
-			if (wert_int >= warn_int)
-			{
-				cout<<"WARNUNG"<<endl;
-				exit(1);
-			}
-
-			if (wert_int >= critical_int)
-			{
-				cout<<"CRITICAL"<<endl;
-				exit(2);
-			}
-			
+			exit(0);
+		}
 
 			
 		}
+
 		int wo_ist_aborted_job_parameter = - 1;
 		wo_ist_aborted_job_parameter = parameter.find("-aborted-job");
 		
 		if (wo_ist_aborted_job_parameter > -1)
 		{
 
-			
+
 			
 			#define NUM_PARAMS 9
 			RFC_CONNECTION_PARAMETER loginParams[NUM_PARAMS];
 
 
 			unsigned resultLen = 0;
-			
 			
 
 			string username;
@@ -816,20 +1149,24 @@ int main(int argc, char *argv[])
 			int wo_ist_gleich = - 1;
 			wo_ist_gleich = username.find("=");
 			username = username.substr(wo_ist_gleich + 1,username.length());
+
 			SAP_UC *username_sapuc = NULL;
 			unsigned username_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (username_sapuc == NULL)
 			{
 
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 
 			string password;
@@ -838,107 +1175,140 @@ int main(int argc, char *argv[])
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = password.find("=");
 			password = password.substr(wo_ist_gleich + 1,password.length());
+
 			SAP_UC *password_sapuc = NULL;
 			unsigned password_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
+
 			{
+
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (password_sapuc == NULL)
 			{
 
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string hostname;
 			hostname = argv[4];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = hostname.find("=");
 			hostname = hostname.substr(wo_ist_gleich + 1,hostname.length());
+
 			SAP_UC *hostname_sapuc = NULL;
 			unsigned hostname_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (hostname_sapuc == NULL)
 			{
 
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string sid;
 			sid = argv[5];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sid.find("=");
 			sid = sid.substr(wo_ist_gleich + 1,sid.length());
+
 			SAP_UC *sid_sapuc = NULL;
+
 			unsigned sid_sapuc_len;
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (sid_sapuc == NULL)
 			{
 
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string sysnr;
 			sysnr = argv[6];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sysnr.find("=");
 			sysnr = sysnr.substr(wo_ist_gleich + 1,sysnr.length());
+
 			SAP_UC *sysnr_sapuc = NULL;
+
 			unsigned sysnr_sapuc_len;
 
 			resultLen = 0;
 
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (sysnr_sapuc == NULL)
 			{
 
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 			string client_nr;
 			client_nr = argv[7];
 
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = client_nr.find("=");
 			client_nr = client_nr.substr(wo_ist_gleich + 1,client_nr.length());
+
 			SAP_UC *client_nr_sapuc = NULL;
 			unsigned client_nr_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
 			if (client_nr_sapuc == NULL)
 			{
 
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
 			}
+
 
 			loginParams[0].name = cU("dest");
 			loginParams[0].value = cU("DEV");
@@ -963,10 +1333,12 @@ int main(int argc, char *argv[])
 			loginParams[7].name = cU("lang");
 			loginParams[7].value = cU("EN");
 			loginParams[8].name = cU("TRACE");
-			loginParams[8].value = cU("0");	
+			loginParams[8].value = cU("0");
 	
+
 			RFC_CONNECTION_HANDLE conn;
 			conn = RfcOpenConnection(loginParams, NUM_PARAMS, &errorInfo);
+
 				
 			if (errorInfo.code != RFC_OK) 
 			{
@@ -978,6 +1350,7 @@ int main(int argc, char *argv[])
 			}
 
 			RFC_FUNCTION_DESC_HANDLE ccms_bapi_handle;
+
 			RFC_FUNCTION_HANDLE rfc_handle;
 
 
@@ -994,28 +1367,39 @@ int main(int argc, char *argv[])
 			RfcSetChars(rfc_handle, cU("INTERFACE"), cU("XBP"), 3, &errorInfo);
 			RfcSetChars(rfc_handle, cU("VERSION"), cU("1.0"), 3, &errorInfo);
 			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
 			ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_XBP_JOB_SELECT"), &errorInfo);
 			rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
-			RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("<USER>"), 8, &errorInfo);
-
+			RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("RFC_TEST"), 8, &errorInfo);
 
 			RfcGetStructure(rfc_handle, cU("JOB_SELECT_PARAM"), &returnStructure, &errorInfo);
+
 			RfcSetStructure(rfc_handle, cU("JOB_SELECT_PARAM"),returnStructure, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("JOBNAME"), cU("*"),1, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("JOBCOUNT"), cU("*"),1, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("JOBGROUP"), cU("*"),1, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("USERNAME"), cU("*"),1, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("FROM_DATE"), cU("1900-01-01"),10, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("FROM_TIME"), cU("00:00:00"),8, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("TO_DATE"), cU("2999-12-31"),10, &errorInfo);
+
 			RfcSetChars(returnStructure, cU("TO_TIME"), cU("00:00:00"),8, &errorInfo);
+
 			RfcSetChars(rfc_handle, cU("SYSTEMID"), sid_sapuc, 3, &errorInfo);
 
 			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
 
 			RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
 			RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
-				
+
+
 			unsigned rowCount = 0;
 			RFC_TABLE_HANDLE table;
 
@@ -1060,36 +1444,38 @@ int main(int argc, char *argv[])
 			for (unsigned i=0; i<rowCount; ++i) 
 			{
 				RfcMoveTo(table, i, NULL);
-					
-				RfcGetString(table, cU("JOBNAME"), job_name,sizeofU(job_name), NULL, &errorInfo);
-					
-				RfcGetString(table, cU("JOBCOUNT"), job_count_number,sizeofU(job_count_number), NULL, &errorInfo);
-					
-				RfcGetString(table, cU("STATUS"), job_status,sizeofU(job_status), NULL, &errorInfo);
-					
-				RfcGetString(table, cU("ENDDATE"), job_end_datum,sizeofU(job_end_datum), NULL, &errorInfo);
-					
-				RfcGetString(table, cU("ENDTIME"), job_end_uhrzeit,sizeofU(job_end_uhrzeit), NULL, &errorInfo);
-					
 
-				
+
+				RfcGetString(table, cU("JOBNAME"), job_name,sizeofU(job_name), NULL, &errorInfo);
+
+				RfcGetString(table, cU("JOBCOUNT"), job_count_number,sizeofU(job_count_number), NULL, &errorInfo);
+
+				RfcGetString(table, cU("STATUS"), job_status,sizeofU(job_status), NULL, &errorInfo);
+
+				RfcGetString(table, cU("ENDDATE"), job_end_datum,sizeofU(job_end_datum), NULL, &errorInfo);
+
+				RfcGetString(table, cU("ENDTIME"), job_end_uhrzeit,sizeofU(job_end_uhrzeit), NULL, &errorInfo);
+
+
+
 				rc = RfcSAPUCToUTF8(job_status, strlenU(job_status), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
 				if (rc == RFC_BUFFER_TOO_SMALL)
 				{
 					rc = RfcSAPUCToUTF8(job_status, strlenU(job_status), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
 				}
-				
+
 				std::stringstream ConvertStream;
 				ConvertStream<<message_char;
 				ConvertStream>>message_string;
-				
+
 				wo_ist_status_A = message_string.find("A");
-				
+
 				if (wo_ist_status_A > -1)
 				{	
+
 					wo_ist_status_A = -1;
 
-				
+
 					rc = RfcSAPUCToUTF8(job_name, strlenU(job_name), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
 					if (rc == RFC_BUFFER_TOO_SMALL)
 					{
@@ -1098,6 +1484,7 @@ int main(int argc, char *argv[])
 					std::stringstream ConvertStream;
 					ConvertStream<<	message_char;
 					ConvertStream>>job_name_string;
+
 					rc = RfcSAPUCToUTF8(job_count_number, strlenU(job_count_number), (RFC_BYTE *)message_char_2, &message_2_int, &result_length_2, &errorInfo);
 					if (rc == RFC_BUFFER_TOO_SMALL)
 					{
@@ -1106,6 +1493,7 @@ int main(int argc, char *argv[])
 					std::stringstream ConvertStream_2;
 					ConvertStream_2<<message_char_2;
 					ConvertStream_2>>job_count_string;
+					
 					rc = RfcSAPUCToUTF8(job_end_datum, strlenU(job_end_datum), (RFC_BYTE *)message_char_3, &message_3_int, &result_length_3, &errorInfo);
 					if (rc == RFC_BUFFER_TOO_SMALL)
 					{
@@ -1114,6 +1502,7 @@ int main(int argc, char *argv[])
 					std::stringstream ConvertStream_3;
 					ConvertStream_3<<message_char_3;
 					ConvertStream_3>>job_end_datum_string;
+					
 					rc = RfcSAPUCToUTF8(job_end_uhrzeit, strlenU(job_end_uhrzeit), (RFC_BYTE *)message_char_4, &message_4_int, &result_length_4, &errorInfo);
 					if (rc == RFC_BUFFER_TOO_SMALL)
 					{
@@ -1122,11 +1511,12 @@ int main(int argc, char *argv[])
 					std::stringstream ConvertStream_4;
 					ConvertStream_4<<message_char_4;
 					ConvertStream_4>>job_end_uhrzeit_string;
-				
+					
+
 					vector_format = job_name_string + ";;" + job_count_string + "##" + job_end_datum_string + ";#;" + job_end_uhrzeit_string;
 					job_name_und_job_count_array.push_back(vector_format);
 
-				
+					
 				}
 		
 			}
@@ -1137,6 +1527,7 @@ int main(int argc, char *argv[])
 			RfcCloseConnection(conn, NULL);
 			
 			
+
 			int anzahl_aborted_jobs = -1;
 			string job_name_temp;
 			string job_name_temp_2;
@@ -1172,52 +1563,60 @@ int main(int argc, char *argv[])
 			string output_format;
 			
 			for (int j = 0; j < job_name_und_job_count_array.size(); j++)
+
 			{
 		
-			
+
 				wo_ist_semikolon = job_name_und_job_count_array[j].find(";;");
-			
+
 				job_name_temp = job_name_und_job_count_array[j].substr(0,wo_ist_semikolon);
 		
 				if (job_name_temp.compare(job_name_temp_2) == 0)
+
 				{
-			
+
 					job_name_array_2.push_back(job_name_und_job_count_array[j]);
 			
 				}
 				if (job_name_temp.compare(job_name_temp_2) != 0)
 				{
-			
+
 					job_name_array_3.push_back(job_name_temp);
 
 					if (job_name_array_2.size() == 0)
 					{
 						job_name_temp_2 = job_name_und_job_count_array[j].substr(0,wo_ist_semikolon);
-			
+
 						continue;
 					}
-			
+
 
 				}
+
 				if (j == job_name_und_job_count_array.size() - 1)
 				{
-			
+
 				}
 				job_name_temp_2 = job_name_und_job_count_array[j].substr(0,wo_ist_semikolon);
 			
-			
+				
 			
 			}
 			
+			
+			
 			for (int k = 0; k < job_name_array_3.size(); k++)
 			{
+			
+
+			
 				for (int l = 0; l < job_name_und_job_count_array.size(); l++)
 				{
 
-					wo_ist_jobname = job_name_und_job_count_array[l].find(job_name_array_3[k] + ";;");		//Problem bei JOB_NAME_X und JON_NAME_X_und_Y, beides wird gefunden :-(# 		wo_ist_jobname mit find #0# job_name_array_3[k] #Z_PROVOKE_JOB_ABORT# job_name_und_job_count_array[l]#Z_PROVOKE_JOB_ABORT_2;;07553<CLIENT>##2021<SYSYSTEMNUMMER>12;#;075832#
+					wo_ist_jobname = job_name_und_job_count_array[l].find(job_name_array_3[k] + ";;");	
 			
 					if (wo_ist_jobname != -1 )
-			
+
 					{
 						wo_ist_doppel_gatter = job_name_und_job_count_array[l].find("##");
 						datum = job_name_und_job_count_array[l].substr(wo_ist_doppel_gatter + 2, 8);
@@ -1225,26 +1624,26 @@ int main(int argc, char *argv[])
 						if (datum_int > datum_int_temp)
 						{
 							datum_int_temp = datum_int;
+
 						}
 					}
 				}
+
 				for (int m = 0; m < job_name_und_job_count_array.size(); m++)
 				{
 					wo_ist_jobname = job_name_und_job_count_array[m].find(job_name_array_3[k]);
-					
-			
-					
+
 					datum_string_temp = std::to_string(datum_int_temp);
 					wo_ist_datum = job_name_und_job_count_array[m].find(datum_string_temp);
 
-					
+
 					if ( (wo_ist_jobname != -1) && (wo_ist_datum != -1) )
-					
+
 					{
-					
+
 						wo_ist_semi_gatter_semi =  job_name_und_job_count_array[m].find(";#;");
 						uhrzeit = job_name_und_job_count_array[m].substr(wo_ist_semi_gatter_semi + 3, 6);
-					
+
 						uhrzeit_int = atoi(uhrzeit.c_str());
 						if(uhrzeit_int > uhrzeit_int_temp)
 						{
@@ -1256,28 +1655,30 @@ int main(int argc, char *argv[])
 					wo_ist_jobname = -1; 
 		
 				}
-				
 
-			
+
+
 			for (int n = 0; n < job_name_und_job_count_array.size(); n++)
 			{
 			
-			
+
 				datum_string_temp_2 = std::to_string(datum_int_temp);
-			
+
 				wo_ist_datum = job_name_und_job_count_array[n].find(datum_string_temp_2);
-			
+
 				uhrzeit_string_temp = std::to_string(uhrzeit_int_temp);
-			
+
 				uhrzeit_string_temp.insert(0, 6 - uhrzeit_string_temp.length(), '0');
-			
+
 				wo_ist_uhrzeit = job_name_und_job_count_array[n].find(uhrzeit_string_temp);
 				
 				wo_ist_jobname = job_name_und_job_count_array[n].find(job_name_array_3[k]);
 				
 				
 				if( (wo_ist_jobname != -1) && (wo_ist_datum != -1) && (wo_ist_uhrzeit != -1) )
+				
 				{
+				
 					uhrzeit_int_temp = -1;
 					uhrzeit_int = -1;
 					datum_int = -1;
@@ -1311,242 +1712,255 @@ int main(int argc, char *argv[])
 			uhrzeit_string_temp = "";
 			datum_string_temp = "";
 			datum_string_temp_2 = "";
+			
 		
 		}
 	
 		sort( aborted_jobs.begin(), aborted_jobs.end() );
 		aborted_jobs.erase( unique( aborted_jobs.begin(), aborted_jobs.end() ), aborted_jobs.end() );
-	
+		
+		
 		if(aborted_jobs.size() > 0)
 		{
 			cout<<"CRITICAL -"<<"\t";
+		
 		}	
 			
 		for (int p = 0; p < aborted_jobs.size(); p++)
 		{
+		
 			output_format = aborted_jobs[p];
-
+		
 			const char x = ';';
     		const char y = '#';
-
+		
 			std::replace(output_format.begin(), output_format.end(), x, y);
+		
 			cout<<output_format <<"\t";
 		}
 		
 		if(aborted_jobs.size() > 0)
 		{
-
+		
 			cout<<endl;
 			exit(2);
 		}	
-	
+		
 
 	}
+		
 	
 		int wo_ist_abap_dump_parameter = - 1;
 		wo_ist_abap_dump_parameter = parameter.find("-abap-dump");
 		
 		if (wo_ist_abap_dump_parameter > -1)
 		{
-	
+		
 			
 			#define NUM_PARAMS 9
 			RFC_CONNECTION_PARAMETER loginParams[NUM_PARAMS];
 
-			
+		
 			unsigned resultLen = 0;
 			
+		
 			
+		
 			string username;
 			username = argv[2];
-			
+		
 			int wo_ist_gleich = - 1;
 			wo_ist_gleich = username.find("=");
 			username = username.substr(wo_ist_gleich + 1,username.length());
+		
 			SAP_UC *username_sapuc = NULL;
 			unsigned username_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
 			if (username_sapuc == NULL)
 			{
-			
+		
 				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
-			
-			
+		
 			string password;
 			password = argv[3];
-			
+		
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = password.find("=");
 			password = password.substr(wo_ist_gleich + 1,password.length());
-			
+		
 			SAP_UC *password_sapuc = NULL;
 			unsigned password_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			if (rc == RFC_BUFFER_TOO_SMALL)
-			
+		
 			{
+		
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
 			if (password_sapuc == NULL)
 			{
-			
+		
 				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
-			
+		
 			string hostname;
 			hostname = argv[4];
-			
+		
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = hostname.find("=");
 			hostname = hostname.substr(wo_ist_gleich + 1,hostname.length());
-			
+		
 			SAP_UC *hostname_sapuc = NULL;
 			unsigned hostname_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+		
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
 			if (hostname_sapuc == NULL)
 			{
-			
+		
 				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
-			
+		
 			string sid;
 			sid = argv[5];
-			
+		
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sid.find("=");
 			sid = sid.substr(wo_ist_gleich + 1,sid.length());
-			
+		
 			SAP_UC *sid_sapuc = NULL;
-			
+		
 			unsigned sid_sapuc_len;
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
+		
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
 			if (sid_sapuc == NULL)
 			{
-			
+		
 				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
-			
+		
 			string sysnr;
 			sysnr = argv[6];
-			
+		
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = sysnr.find("=");
 			sysnr = sysnr.substr(wo_ist_gleich + 1,sysnr.length());
-			
+		
 			SAP_UC *sysnr_sapuc = NULL;
-			
+		
 			unsigned sysnr_sapuc_len;
-			
+		
 			resultLen = 0;
-			
+		
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
-			
+		
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
 			if (sysnr_sapuc == NULL)
 			{
-			
+		
 				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
-			
+		
 			string client_nr;
 			client_nr = argv[7];
-			
+		
 			wo_ist_gleich = - 1;
 			wo_ist_gleich = client_nr.find("=");
 			client_nr = client_nr.substr(wo_ist_gleich + 1,client_nr.length());
-			
+		
 			SAP_UC *client_nr_sapuc = NULL;
 			unsigned client_nr_sapuc_len;			
 			resultLen = 0;
 			rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
-			
+		
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
 			if (client_nr_sapuc == NULL)
 			{
-			
+		
 				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
 				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
-			
+		
 			}
-			
+
+
 			loginParams[0].name = cU("dest");
 			loginParams[0].value = cU("DEV");
 			loginParams[1].name =cU("user");
-			
+
 			loginParams[1].value = username_sapuc;
 			loginParams[2].name = cU("passwd");
-			
+
 			loginParams[2].value = password_sapuc;
 			loginParams[3].name = cU("ASHOST");
-			
+
 			loginParams[3].value = hostname_sapuc;
 			loginParams[4].name = cU("SYSID");
-			
+
 			loginParams[4].value = sid_sapuc;
 			loginParams[5].name = cU("SYSNR");
-			
+
 			loginParams[5].value = sysnr_sapuc;
 			loginParams[6].name = cU("CLIENT");
-			
+
 			loginParams[6].value = client_nr_sapuc;
 			loginParams[7].name = cU("lang");
 			loginParams[7].value = cU("EN");
 			loginParams[8].name = cU("TRACE");
-			loginParams[8].value = cU("0");	
-	
+			loginParams[8].value = cU("0");
+
 			RFC_CONNECTION_HANDLE conn;
 			conn = RfcOpenConnection(loginParams, NUM_PARAMS, &errorInfo);
+
 				
 			if (errorInfo.code != RFC_OK) 
 			{
@@ -1558,6 +1972,7 @@ int main(int argc, char *argv[])
 			}
 
 		RFC_FUNCTION_DESC_HANDLE ccms_bapi_handle;
+
 		RFC_FUNCTION_HANDLE rfc_handle;
 
 
@@ -1575,21 +1990,20 @@ int main(int argc, char *argv[])
 		RfcSetChars(rfc_handle, cU("INTERFACE"), cU("XBP"), 3, &errorInfo);
 		RfcSetChars(rfc_handle, cU("VERSION"), cU("1.0"), 3, &errorInfo);
 		rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
 		ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("/SDF/GET_DUMP_LOG"), &errorInfo);
 		rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
 
 
 		RfcSetChars(rfc_handle, cU("DATE_FROM"), cU("1900-01-01"), 10, &errorInfo);	
 
-
 		RfcSetChars(rfc_handle, cU("DATE_TO"), cU("2999-12-31"), 10, &errorInfo);	
-			
+
 
 		RfcSetChars(rfc_handle, cU("TIME_FROM"), cU("00:00:00"), 8, &errorInfo);	
-			
 
 		RfcSetChars(rfc_handle, cU("TIME_TO"), cU("00:00:00"), 8, &errorInfo);	
-			
+
 		rc = RfcInvoke(conn, rfc_handle, &errorInfo);
 
 		RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
@@ -1653,7 +2067,6 @@ int main(int argc, char *argv[])
 		{	
 			RfcMoveTo(table, i, NULL);
 
-
 			RfcGetString(table, cU("E2E_DATE"), e2e_date,sizeofU(e2e_date), NULL, &errorInfo);
 
 			rc = RfcSAPUCToUTF8(e2e_date, strlenU(e2e_date), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
@@ -1662,13 +2075,20 @@ int main(int argc, char *argv[])
 				rc = RfcSAPUCToUTF8(e2e_date, strlenU(e2e_date), (RFC_BYTE *)message_char, &message_int, &result_length, &errorInfo);
 			}
 			e2e_date_string = message_char;
+
+
+
 			RfcGetString(table, cU("E2E_TIME"), e2e_time,sizeofU(e2e_time), NULL, &errorInfo);
+
 			rc = RfcSAPUCToUTF8(e2e_time, strlenU(e2e_time), (RFC_BYTE *)message_char_2, &message_int_2, &result_length_2, &errorInfo);
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				rc = RfcSAPUCToUTF8(e2e_time, strlenU(e2e_time), (RFC_BYTE *)message_char_2, &message_int_2, &result_length_2, &errorInfo);
 			}
 			e2e_time_string = message_char_2;
+
+
+
 			RfcGetString(table, cU("E2E_USER"), e2e_user,sizeofU(e2e_user), NULL, &errorInfo);
 
 			rc = RfcSAPUCToUTF8(e2e_user, strlenU(e2e_user), (RFC_BYTE *)message_char_3, &message_int_3, &result_length_3, &errorInfo);
@@ -1677,34 +2097,49 @@ int main(int argc, char *argv[])
 				rc = RfcSAPUCToUTF8(e2e_user, strlenU(e2e_user), (RFC_BYTE *)message_char_3, &message_int_3, &result_length_3, &errorInfo);
 			}
 			e2e_user_string = message_char_3;
+
 			RfcGetString(table, cU("E2E_SEVERITY"), e2e_severity,sizeofU(e2e_severity), NULL, &errorInfo);
+
 			rc = RfcSAPUCToUTF8(e2e_severity, strlenU(e2e_severity), (RFC_BYTE *)message_char_4, &message_int_4, &result_length_4, &errorInfo);
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				rc = RfcSAPUCToUTF8(e2e_severity, strlenU(e2e_severity), (RFC_BYTE *)message_char_4, &message_int_4, &result_length_4, &errorInfo);
 			}
 			e2e_severity_string = message_char_4;
+
 			RfcGetString(table, cU("E2E_HOST"), e2e_host,sizeofU(e2e_host), NULL, &errorInfo);
+
 			rc = RfcSAPUCToUTF8(e2e_host, strlenU(e2e_host), (RFC_BYTE *)message_char_5, &message_int_5, &result_length_5, &errorInfo);
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				rc = RfcSAPUCToUTF8(e2e_host, strlenU(e2e_host), (RFC_BYTE *)message_char_5, &message_int_5, &result_length_5, &errorInfo);
 			}
 			e2e_host_string = message_char_5;
+
+
+
 			RfcGetString(table, cU("FIELD1"), field1,sizeofU(field1), NULL, &errorInfo);
+
 			rc = RfcSAPUCToUTF8(field1, strlenU(field1), (RFC_BYTE *)message_char_6, &message_int_6, &result_length_6, &errorInfo);
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				rc = RfcSAPUCToUTF8(field1, strlenU(field1), (RFC_BYTE *)message_char_6, &message_int_6, &result_length_6, &errorInfo);
 			}
 			field1_string = message_char_6;
+
+
+
 			RfcGetString(table, cU("FIELD4"), field4,sizeofU(field4), NULL, &errorInfo);
+
 			rc = RfcSAPUCToUTF8(field4, strlenU(field4), (RFC_BYTE *)message_char_7, &message_int_7, &result_length_7, &errorInfo);
 			if (rc == RFC_BUFFER_TOO_SMALL)
 			{
 				rc = RfcSAPUCToUTF8(field4, strlenU(field4), (RFC_BYTE *)message_char_7, &message_int_7, &result_length_7, &errorInfo);
 			}
 			field4_string = message_char_7;
+
+
+
 			RfcGetString(table, cU("FIELD9"), field9,sizeofU(field9), NULL, &errorInfo);
 
 			rc = RfcSAPUCToUTF8(field9, strlenU(field9), (RFC_BYTE *)message_char_8, &message_int_8, &result_length_8, &errorInfo);
@@ -1714,15 +2149,17 @@ int main(int argc, char *argv[])
 			}
 			field9_string = message_char_8;
 
+
+
 			abap_dumps_format = e2e_date_string + "###" + e2e_time_string + ";;;" + e2e_severity_string + "#;#" + e2e_host_string + ";#;" + field1_string + "##;" + field4_string + ";;#" + field9_string + "+++" + e2e_user_string;
 			abap_dumps.push_back(abap_dumps_format);
 
 		}
 			
-		//###############################################################################################################
+
 		RfcDestroyFunction(rfc_handle, &errorInfo);
 		RfcCloseConnection(conn, NULL);
-		//###############################################################################################################	
+
 		
 		string command_1;
 		command_1 = "cp /tmp/sap_mon_abap_dump.log /tmp/sap_mon_abap_dump_diff.log > /dev/null";
@@ -1733,6 +2170,7 @@ int main(int argc, char *argv[])
 
 		for (int j = 0; j < abap_dumps.size(); j++)
 		{
+
 			sap_mon_abap_dump<<abap_dumps[j]<<endl;
 
 		}
@@ -1759,10 +2197,10 @@ int main(int argc, char *argv[])
 			{
 				command_rueckgabe_temp = string(str);
 				command_rueckgabe.append(command_rueckgabe_temp);
-				
+
 				abap_dumps_diff.push_back(command_rueckgabe);
 			}
-		
+
 		pclose(pipe);
 		
 		string output_format;
@@ -1785,24 +2223,24 @@ int main(int argc, char *argv[])
 			
 		for (int k = 0; k < abap_dumps_diff.size(); k++)
 		{
-			
+
 			wo_ist_datum = abap_dumps_diff[k].find("###");
 			datum = abap_dumps_diff[k].substr(0,wo_ist_datum);
-			
 
-			
+
+
 			uhrzeit = abap_dumps_diff[k].substr(wo_ist_datum + 3,6);
 			
 
 			wo_ist_severity = abap_dumps_diff[k].find(";;;");
 			wo_ist_hostname = abap_dumps_diff[k].find("#;#");
-			
+
 			severity = abap_dumps_diff[k].substr(wo_ist_severity + 3,wo_ist_hostname - wo_ist_severity - 3);
-			
+
 
 			wo_ist_runtime_error = abap_dumps_diff[k].find(";#;");
 			hostname_output = abap_dumps_diff[k].substr(wo_ist_hostname + 3 , wo_ist_runtime_error - wo_ist_hostname - 3);
-			
+
 			wo_ist_runtime_error = abap_dumps_diff[k].find(";#;");
 			wo_ist_abap_programm = abap_dumps_diff[k].find("##;");
 			runtime_error = abap_dumps_diff[k].substr(wo_ist_runtime_error + 3, wo_ist_abap_programm - wo_ist_runtime_error - 3);
@@ -1833,9 +2271,762 @@ int main(int argc, char *argv[])
 
 	
 	}
+		
+
+		int wo_ist_check_ALL_parameter = - 1;
+		wo_ist_check_ALL_parameter = parameter.find("-checkall");
+
+		if (argv[1] == std::string("-checkall"))
+		{
+
+			#define NUM_PARAMS 9
+			RFC_CONNECTION_PARAMETER loginParams[NUM_PARAMS];
+			unsigned resultLen = 0;
+			
+
+			string username;
+			username = argv[2];
+
+			int wo_ist_gleich = - 1;
+			wo_ist_gleich = username.find("=");
+			username = username.substr(wo_ist_gleich + 1,username.length());
+
+			SAP_UC *username_sapuc = NULL;
+			unsigned username_sapuc_len;			
+			resultLen = 0;
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
+			if (rc == RFC_BUFFER_TOO_SMALL)
+			{
+				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
+
+			}
+			if (username_sapuc == NULL)
+			{
+
+				username_sapuc = (SAP_UC*)reallocU(username_sapuc, username_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)username.c_str(),strlen(username.c_str()),username_sapuc, &username_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+
+			string password;
+			password = argv[3];
+
+			wo_ist_gleich = - 1;
+			wo_ist_gleich = password.find("=");
+			password = password.substr(wo_ist_gleich + 1,password.length());
+
+			SAP_UC *password_sapuc = NULL;
+			unsigned password_sapuc_len;			
+			resultLen = 0;
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
+			if (rc == RFC_BUFFER_TOO_SMALL)
+
+			{
+
+				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+			if (password_sapuc == NULL)
+			{
+
+				password_sapuc = (SAP_UC*)reallocU(password_sapuc, password_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)password.c_str(),strlen(password.c_str()),password_sapuc, &password_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+
+			string hostname;
+			hostname = argv[4];
+
+			wo_ist_gleich = - 1;
+			wo_ist_gleich = hostname.find("=");
+			hostname = hostname.substr(wo_ist_gleich + 1,hostname.length());
+
+			SAP_UC *hostname_sapuc = NULL;
+			unsigned hostname_sapuc_len;			
+			resultLen = 0;
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
+			if (rc == RFC_BUFFER_TOO_SMALL)
+			{
+
+				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+			if (hostname_sapuc == NULL)
+			{
+
+				hostname_sapuc = (SAP_UC*)reallocU(hostname_sapuc, hostname_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)hostname.c_str(),strlen(hostname.c_str()),hostname_sapuc, &hostname_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+
+			string sid;
+			sid = argv[5];
+
+			wo_ist_gleich = - 1;
+			wo_ist_gleich = sid.find("=");
+			sid = sid.substr(wo_ist_gleich + 1,sid.length());
+
+			SAP_UC *sid_sapuc = NULL;
+
+			unsigned sid_sapuc_len;
+			resultLen = 0;
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
+			if (rc == RFC_BUFFER_TOO_SMALL)
+			{
+
+				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+			if (sid_sapuc == NULL)
+			{
+
+				sid_sapuc = (SAP_UC*)reallocU(sid_sapuc, sid_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sid.c_str(),strlen(sid.c_str()),sid_sapuc, &sid_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+
+			string sysnr;
+			sysnr = argv[6];
+
+			wo_ist_gleich = - 1;
+			wo_ist_gleich = sysnr.find("=");
+			sysnr = sysnr.substr(wo_ist_gleich + 1,sysnr.length());
+
+			SAP_UC *sysnr_sapuc = NULL;
+
+			unsigned sysnr_sapuc_len;
+
+			resultLen = 0;
+
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
+			if (rc == RFC_BUFFER_TOO_SMALL)
+			{
+
+				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+			if (sysnr_sapuc == NULL)
+			{
+
+				sysnr_sapuc = (SAP_UC*)reallocU(sysnr_sapuc, sysnr_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)sysnr.c_str(),strlen(sysnr.c_str()),sysnr_sapuc, &sysnr_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+
+			string client_nr;
+			client_nr = argv[7];
+
+			wo_ist_gleich = - 1;
+			wo_ist_gleich = client_nr.find("=");
+			client_nr = client_nr.substr(wo_ist_gleich + 1,client_nr.length());
+
+			SAP_UC *client_nr_sapuc = NULL;
+			unsigned client_nr_sapuc_len;			
+			resultLen = 0;
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
+			if (rc == RFC_BUFFER_TOO_SMALL)
+			{
+
+				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+			if (client_nr_sapuc == NULL)
+			{
+
+				client_nr_sapuc = (SAP_UC*)reallocU(client_nr_sapuc, client_nr_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)client_nr.c_str(),strlen(client_nr.c_str()),client_nr_sapuc, &client_nr_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+			
+			loginParams[0].name = cU("dest");
+			loginParams[0].value = cU("DEV");
+			loginParams[1].name =cU("user");
+
+			loginParams[1].value = username_sapuc;
+			loginParams[2].name = cU("passwd");
+
+			loginParams[2].value = password_sapuc;
+			loginParams[3].name = cU("ASHOST");
+
+			loginParams[3].value = hostname_sapuc;
+			loginParams[4].name = cU("SYSID");
+
+			loginParams[4].value = sid_sapuc;
+			loginParams[5].name = cU("SYSNR");
+
+			loginParams[5].value = sysnr_sapuc;
+			loginParams[6].name = cU("CLIENT");
+
+			loginParams[6].value = client_nr_sapuc;
+			loginParams[7].name = cU("lang");
+			loginParams[7].value = cU("EN");
+			loginParams[8].name = cU("TRACE");
+			loginParams[8].value = cU("0");
 	
+			RFC_CONNECTION_HANDLE conn;
+			conn = RfcOpenConnection(loginParams, NUM_PARAMS, &errorInfo);
+
+				
+			if (errorInfo.code != RFC_OK) 
+			{
+				cout<<"Login PROBLEM"<<endl;
+				printfU(cU("key# %s: %d\n"),errorInfo.key);
+				printfU(cU("message# %s: %d\n"),errorInfo.message);
+				printfU(cU("code# %d\n"),errorInfo.code);
+				exit(-1);
+						
+			}
+
+
+			RFC_STRUCTURE_HANDLE returnStructure;
+			RFC_FUNCTION_DESC_HANDLE ccms_bapi_handle;
+			RFC_FUNCTION_HANDLE rfc_handle;
+				
+			SAP_UC message[8192] = iU("");
+			
+
+			
+			ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_XMI_LOGON"), &errorInfo);
+			
+
+			rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+			RfcSetChars(rfc_handle, cU("EXTCOMPANY"), cU("TESTCOPMANY"), 11, &errorInfo);
+			RfcSetChars(rfc_handle, cU("EXTPRODUCT"), cU("TESTPRODUKT"), 11, &errorInfo);
+			RfcSetChars(rfc_handle, cU("INTERFACE"), cU("XAL"), 3, &errorInfo);
+			RfcSetChars(rfc_handle, cU("VERSION"), cU("1.0"), 3, &errorInfo);
+			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
+			string monitor_name_temp_2;
+			string monitor_name;
+
+			monitor_name_temp_2 = argv[8];
+
+			int wo_ist_gleich_2 = - 1;
+			wo_ist_gleich_2 = monitor_name_temp_2.find("=");
+			int mointor_lange = 0;
+			mointor_lange = monitor_name_temp_2.length();
+
+			monitor_name = monitor_name_temp_2.substr(wo_ist_gleich_2 + 1, mointor_lange);
+
+			int wo_ist_backslash = - 1;
+			wo_ist_backslash = monitor_name.find("\\");
+
+			string ms_name_2;
+			ms_name_2 = monitor_name.substr(0,wo_ist_backslash);
+
+
+
+			SAP_UC *ms_name_sapuc = NULL;
+			unsigned ms_name_sapuc_len;	
+			resultLen = 0;
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)ms_name_2.c_str(),strlen(ms_name_2.c_str()),ms_name_sapuc, &ms_name_sapuc_len, &resultLen,  &errorInfo);
+			if (rc == RFC_BUFFER_TOO_SMALL)
+			{
+				ms_name_sapuc = (SAP_UC*)reallocU(ms_name_sapuc, ms_name_sapuc_len);
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)ms_name_2.c_str(),strlen(ms_name_2.c_str()),ms_name_sapuc, &ms_name_sapuc_len, &resultLen,  &errorInfo);
+			}
+			if (ms_name_sapuc == NULL)
+			{
+
+				ms_name_sapuc = (SAP_UC*)reallocU(ms_name_sapuc, ms_name_sapuc_len);
+				
+				rc = RfcUTF8ToSAPUC((RFC_BYTE*)ms_name_2.c_str(),strlen(ms_name_2.c_str()),ms_name_sapuc, &ms_name_sapuc_len, &resultLen,  &errorInfo);
+
+			}
+
+			int wo_ist_backslash_2 = - 1;
+			wo_ist_backslash_2 = monitor_name.find("\\",wo_ist_backslash + 1);
+
+			string moni_name_2 = monitor_name.substr(wo_ist_backslash + 1, wo_ist_backslash_2 - wo_ist_backslash - 1);
+
+
+
+			SAP_UC *moni_name_sapuc = NULL;
+			unsigned moni_name_sapuc_len;	
+			resultLen = - 1;
+
+			int n = moni_name_2.length();
+			char char_array[n + 1];
+			rc = RfcUTF8ToSAPUC((RFC_BYTE*)char_array,n + 1,moni_name_sapuc, &moni_name_sapuc_len, &resultLen,  &errorInfo);
+
+				if (rc == 20)
+				{
+					
+
+					moni_name_sapuc = (SAP_UC*)reallocU(moni_name_sapuc, moni_name_sapuc_len);
+					rc = RfcUTF8ToSAPUC((RFC_BYTE*)moni_name_2.c_str(),strlen(moni_name_2.c_str()),moni_name_sapuc, &moni_name_sapuc_len, &resultLen,  &errorInfo);
+
+				}
+				if (rc == RFC_BUFFER_TOO_SMALL)
+				{
+
+					moni_name_sapuc = (SAP_UC*)reallocU(moni_name_sapuc, moni_name_sapuc_len);
+					rc = RfcUTF8ToSAPUC((RFC_BYTE*)moni_name_2.c_str(),strlen(moni_name_2.c_str()),moni_name_sapuc, &moni_name_sapuc_len, &resultLen,  &errorInfo);
+
+				}
+				if (moni_name_sapuc == NULL)
+				{
+
+					moni_name_sapuc = (SAP_UC*)reallocU(moni_name_sapuc, moni_name_sapuc_len);
+					rc = RfcUTF8ToSAPUC((RFC_BYTE*)moni_name_2.c_str(),strlen(moni_name_2.c_str()),moni_name_sapuc, &moni_name_sapuc_len, &resultLen,  &errorInfo);
+
+				}
+				if (rc == 23)
+				{
+
+					moni_name_sapuc = (SAP_UC*)reallocU(moni_name_sapuc, moni_name_sapuc_len);
+					rc = RfcUTF8ToSAPUC((RFC_BYTE*)moni_name_2.c_str(),strlen(moni_name_2.c_str()),moni_name_sapuc, &moni_name_sapuc_len, &resultLen,  &errorInfo);
+
+				}
+
+			ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MON_GETTREE"), &errorInfo);
+			rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+			
+			RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("RFC_TEST"), 8, &errorInfo);
+			
+			RfcSetInt(rfc_handle, cU("MAX_TREE_DEPTH"), 0,&errorInfo);
+
+			RfcGetStructure(rfc_handle, cU("MONITOR_NAME"), &returnStructure, &errorInfo);
+
+			RfcSetChars(returnStructure, cU("MONI_NAME"), moni_name_sapuc,strlenU(moni_name_sapuc), &errorInfo);			
+
+			RfcSetChars(returnStructure, cU("MS_NAME"),ms_name_sapuc,strlenU(ms_name_sapuc), &errorInfo);			
+
+			RfcSetInt(rfc_handle, cU("VIS_ON_USR_LEVEL"), 6,&errorInfo);
+			
+			rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
+
+			unsigned rowCount = 0;
+			RFC_TABLE_HANDLE table;
+			rc = RfcGetTable(rfc_handle, cU("TREE_NODES"),&table,&errorInfo);
+
+			RfcGetRowCount(table, &rowCount, &errorInfo);
+
+
+			SAP_UC ms_name[4096] = iU("");
+			SAP_UC moni_name[4096] = iU("");
+
+			SAP_UC context_name[4096] = iU("");
+			SAP_UC mte_name[4096] = iU("");
+			SAP_UC object_name[4096] = iU("");
+			SAP_UC system_id[4096] = iU("");
+
+
+			RFC_TABLE_HANDLE table_2;
+			
+			unsigned rowCount_2 = 0;
+			
+			string message_string_mtclass;
+
+			
+			for (unsigned i = 0; i < rowCount; ++i) 
+
+			{
+				RfcMoveTo(table, i, NULL);
+				
+				RfcGetString(table, cU("MTSYSID"), system_id,sizeofU(ms_name), NULL, &errorInfo);
+
+					printfU(cU("%s\\"), system_id);
+					
+				RfcGetString(table, cU("MTMCNAME"), context_name,sizeofU(ms_name), NULL, &errorInfo);
+
+					printfU(cU("%s\\"), context_name);
+					
+
+					
+				RfcGetString(table, cU("OBJECTNAME"), object_name,sizeofU(ms_name), NULL, &errorInfo);
+
+					printfU(cU("%s\\"), object_name);	
+					
+				RfcGetString(table, cU("MTNAMESHRT"), mte_name,sizeofU(ms_name), NULL, &errorInfo);
+
+					printfU(cU("%s "), mte_name);	
+
+				ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETTIDBYNAME"), &errorInfo);
+						
+				rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+
+
+				RfcSetChars(rfc_handle, cU("CONTEXT_NAME"), context_name, strlenU(context_name), &errorInfo);	
+				RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 26, &errorInfo);
+				RfcSetChars(rfc_handle, cU("MTE_NAME"), mte_name, strlenU(mte_name), &errorInfo);	
+				RfcSetChars(rfc_handle, cU("OBJECT_NAME"), object_name, strlenU(object_name), &errorInfo);	
+				RfcSetChars(rfc_handle, cU("SYSTEM_ID"), system_id, strlenU(system_id), &errorInfo);	
+
+
+				rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+
+				RFC_STRUCTURE_HANDLE returnStructure;
+
+				RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+
+				rc = RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				SAP_UC message_mtclass[9999] = iU("");
+							
+				RfcGetStructure(rfc_handle, cU("TID"), &returnStructure, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MTSYSID"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MTMCNAME"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MTNUMRANGE"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MTUID"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MTCLASS"), message_mtclass, sizeofU(message_mtclass), &resultLen, &errorInfo);
+
+				RfcGetString(returnStructure, cU("MTINDEX"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				RfcGetString(returnStructure, cU("EXTINDEX"), message, sizeofU(message), &resultLen, &errorInfo);
+
+				unsigned message_int_mtclass;
+				unsigned result_length_mtclass;
+				char message_char_mtclass[9999];
+				
+				resultLen = 0;
+				rc = RfcSAPUCToUTF8(message_mtclass, strlenU(message_mtclass), (RFC_BYTE *)message_char_mtclass, &message_int_mtclass, &result_length_mtclass, &errorInfo);
+				if (rc == RFC_BUFFER_TOO_SMALL)
+				{
+					rc = RfcSAPUCToUTF8(message_mtclass, strlenU(message_mtclass), (RFC_BYTE *)message_char_mtclass, &message_int_mtclass, &result_length_mtclass, &errorInfo);
+				}
+				
+				std::stringstream ConvertStream_mtclass;
+				
+				ConvertStream_mtclass<<	message_char_mtclass;
+				ConvertStream_mtclass>>message_string_mtclass;
+				
+				message_string_mtclass = message_string_mtclass.substr(0,3);
+				
+				
+				if (message_string_mtclass == "050")
+				{
+				
+					cout<<"###";
+					cout<<endl;
+					continue;
+				
+				}
+				
+				
+				if (message_string_mtclass == "111")
+				{	
+					
+				
+					ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETTXTPROP"), &errorInfo);
+					rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+					RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 26, &errorInfo);
+					rc = RfcSetStructure(rfc_handle, cU("TID"),returnStructure, &errorInfo);
+					rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("PROPERTIES"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("TEXT"), message, sizeofU(message), &resultLen, &errorInfo);
+						printfU(cU(" %s\n"), message);
+				}
+
+				
+				if (message_string_mtclass == "101")
+				{
+				
+					ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETMLCURVAL"), &errorInfo);
+					rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+					RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 26, &errorInfo);
+					rc = RfcSetStructure(rfc_handle, cU("TID"),returnStructure, &errorInfo);
+					rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("XMI_MSG_EXT"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("MSG"), message, sizeofU(message), &resultLen, &errorInfo);
+						printfU(cU(" %s\n"), message);
+				
+
+				}
+				
+				
+				if (message_string_mtclass == "102")
+				{
+				
+						
+					ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETSMVALUE"), &errorInfo);
+					rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+					RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 4, &errorInfo);
+					rc = RfcSetStructure(rfc_handle, cU("TID"),returnStructure, &errorInfo);
+					rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("VALUE"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("MSG"), message, sizeofU(message), &resultLen, &errorInfo);
+						printfU(cU(" %s\n"), message);
+								
+				}
+				
+				
+				if (message_string_mtclass == "100")
+				{
+				
+					
+					ccms_bapi_handle = RfcGetFunctionDesc(conn, cU("BAPI_SYSTEM_MTE_GETPERFCURVAL"), &errorInfo);
+					rfc_handle = RfcCreateFunction(ccms_bapi_handle, &errorInfo);
+					RfcSetChars(rfc_handle, cU("EXTERNAL_USER_NAME"), cU("External_User_Name_nonsens"), 4, &errorInfo);
+					rc = RfcSetStructure(rfc_handle, cU("TID"),returnStructure, &errorInfo);
+					rc = RfcInvoke(conn, rfc_handle, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("RETURN"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("MESSAGE"), message, sizeofU(message), &resultLen, &errorInfo);
+					RfcGetStructure(rfc_handle, cU("CURRENT_VALUE"), &returnStructure, &errorInfo);
+					RfcGetString(returnStructure, cU("ALRELEVVAL"), message, sizeofU(message), &resultLen, &errorInfo);
+						printfU(cU(" %s\n"), message);
+						
+				
+				
+				}
+		
+				message_string_mtclass = "";
+				message_string_mtclass.clear();
+				
+				
+			}
+
+			RfcDestroyFunction(rfc_handle, &errorInfo);
+			
+			RfcCloseConnection(conn, NULL);
+
+					
+		}
+		
+		
+
+		
+		int wo_ist_ssl_parameter = - 1;
+		wo_ist_ssl_parameter = parameter.find("-sslview");
+
+		if (argv[1] == std::string("-sslview"))
+		{
+
+			ssl_check = false;
+
+			
+			cout<<"Folgende Zertifikate mit dazugehörigem Ablaufdatum sind in der Zertifikatsliste aktiv"<<endl<<endl;
+
+			username_extern = argv[2];
+			password_extern = argv[3];
+			hostname_extern = argv[4];
+			sid_extern = argv[5];
+			sysnr_extern = argv[6];
+			client_nr_extern = argv[7];
+			
+			void ssfp_get_pseinfo();
+			ssfp_get_pseinfo();
+			
+
+	
+			void read_cert_infos();
+			read_cert_infos();
+			
+		}
+		
+		
+
+		
+		int wo_ist_sslcheck_parameter = - 1;
+		wo_ist_sslcheck_parameter = parameter.find("-sslcheck");
+
+				
+		if (argv[1] == std::string("-sslcheck"))
+		{
+
+			ssl_check = true;
+
+			
+			username_extern = argv[2];
+			password_extern = argv[3];
+			hostname_extern = argv[4];
+			sid_extern = argv[5];
+			sysnr_extern = argv[6];
+			client_nr_extern = argv[7];
+			string subject_suchen = argv[8];
+			
+			
+			void ssfp_get_pseinfo();
+			ssfp_get_pseinfo();
+			
+
+			
+			void read_cert_infos();
+			read_cert_infos();
+			
+
+			
+			int certlist_array_groesse = - 1;
+			certlist_array_groesse = certlist_subj_valid_until.size();
+			
+			string certlist_subj_valid_until_string;
+			int wo_ist_subject_suchen = - 1;
+			
+			subject_suchen = subject_suchen.substr(13,subject_suchen.length());
+
+			int wo_ist_trennzeichen = - 1;
+			string vaild_until_only_string;
+		
+			
+			for (int i = 0; i < certlist_array_groesse; i++)
+			{
+				
+				certlist_subj_valid_until_string = certlist_subj_valid_until[i];
+							
+				
+				
+				wo_ist_subject_suchen = certlist_subj_valid_until_string.find(subject_suchen);
+				
+				
+				
+				if (wo_ist_subject_suchen >= 0)
+				{
+				
+					wo_ist_trennzeichen = certlist_subj_valid_until_string.find(";;;###");
+				
+					vaild_until_only_string = certlist_subj_valid_until_string.substr(wo_ist_trennzeichen + 6, certlist_subj_valid_until_string.length());
+				
+					const char *valid_until_char = vaild_until_only_string.c_str();
+
+				
+					struct tm zeit;
+				
+					strptime(valid_until_char, "%b %d %H:%M:%S %Y %Z", &zeit);
+
+					char puffer[128];
+					strftime(puffer, sizeof(puffer), "%d %b %Y %H:%M:%S", &zeit);
+
+				
+					time_t aktuelle_zeit = std::time(nullptr);
+				
+					
+					int aktuelle_zeit_int = aktuelle_zeit;
+					int valid_until_int = mktime(&zeit);
+				
+					int zeit_differenz = valid_until_int - aktuelle_zeit_int;
+				
+					const int stunden_pro_tag = 24;
+					const int minuten_pro_stunde = 60;
+					const int sekunden_pro_minute = 60;
+					
+				
+					long zeit_differenz_sekunden_long = zeit_differenz;
+					
+					long sekunden = zeit_differenz_sekunden_long % sekunden_pro_minute;
+					long minuten = zeit_differenz_sekunden_long / sekunden_pro_minute % minuten_pro_stunde;
+					long tage = zeit_differenz_sekunden_long / sekunden_pro_minute / minuten_pro_stunde / stunden_pro_tag;
+
+				
+					if (argc <= 9)
+					{
+				
+						cout<<tage<<endl;
+						exit(0);
+					}
+					
+				
+					if (argc > 9)
+					{
+						string tage_warn = argv[9];
+						string tage_critical = argv[10];
+			
+				
+						tage_warn = tage_warn.substr(6,tage_warn.length());
+						tage_critical = tage_critical.substr(10,tage_critical.length());
+						
+						std::string::size_type sz;  
+				
+						long tage_warn_long = stol(tage_warn,&sz);
+				
+											
+						long tage_critical_long = stol(tage_critical,&sz);
+				
+						if ((tage <= tage_warn_long) && ( tage >= tage_critical_long ))
+						{
+							cout<<"WARNING - "<<tage<<endl;
+							exit(1);
+						}
+						if (tage >= tage_warn_long)
+						{
+				
+							cout<<"OK - "<<tage<<endl;
+							exit(0);
+						}
+				
+						if (tage <= tage_critical_long)
+						{
+				
+							cout<<"CRITICAL - "<<tage<<endl;
+							exit(2);
+						}
+				
+					}
+			  
+				}
+				wo_ist_subject_suchen = - 1;
+				wo_ist_trennzeichen = - 1;
+			}
+			
+		}
+		
+	
+
+		
+		int wo_ist_rfc_parameter = - 1;
+		wo_ist_rfc_parameter = parameter.find("-rfc");
+
+		
+		
+		if (argv[1] == std::string("-rfc"))
+		{
+			username_extern = argv[2];
+			password_extern = argv[3];
+			hostname_extern = argv[4];
+			sid_extern = argv[5];
+			sysnr_extern = argv[6];
+			client_nr_extern = argv[7];
+			rfc_destination = argv[8];
+			
+			void rfc_ping();
+			rfc_ping();
+			
+
+			if (icinga_retun_code == 0)
+			{
+				cout<<"OK - RFC destination "<<rfc_destination<<endl;
+
+				
+				exit(0);
+			}
+			
+			if (icinga_retun_code == 2)
+			{
+
+				cout<<"critical - "<<rueckgabe_nachricht<<endl;
+
+				
+				exit(icinga_retun_code);
+			}
+		}
+		
 	return(0);
 }
+
 
 
 
